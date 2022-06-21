@@ -21,11 +21,3 @@ variable "client_secret" {
 variable "tenant_id" {
   description = "The Azure Tenant ID in which all resources should be provisioned in"
 }
-
-#variable "client_certificate_path" {
-#    description = "The path to the client certificate used to authenticate"
-#}
-#
-#variable "client_certificate_password" {
-#  description = "The password for the client certificate used to authenticate"
-#}
