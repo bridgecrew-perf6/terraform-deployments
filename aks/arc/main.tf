@@ -97,3 +97,33 @@ resource "azurerm_kubernetes_cluster_node_pool" "arc-nodepool-windows-user" {
     "kubernetes.azure.com/scalesetpriority=spot:NoSchedule"
   ]
 }
+
+resource "null_resource" "cert-manager-deployment" {
+  depends_on = [
+    azurerm_kubernetes_cluster.arc,
+    azurerm_kubernetes_cluster_node_pool.arc-nodepool-linux-user,
+    azurerm_kubernetes_cluster_node_pool.arc-nodepool-windows-user,
+  ]
+
+  provisioner "local-exec" {
+    when = create
+    command = <<-EOF
+      set -euo pipefail
+
+      kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.8.1/cert-manager.yaml
+      kubectl create -f https://github.com/actions-runner-controller/actions-runner-controller/releases/download/v0.24.1/actions-runner-controller.yaml
+      kubectl create secret generic controller-manager -n actions-runner-system --from-literal=github_app_id=${var.app_id} --from-literal=github_app_installation_id=${var.installation_id} --from-file=github_app_private_key=${var.private_key_file_path}
+      kubectl set env deploy controller-manager -c manager GITHUB_ENTERPRISE_URL=${var.github_url} --namespace actions-runner-system
+    EOF
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOF
+      set -euo pipefail
+
+      kubectl delete namespace actions-runner-system
+      kubectl delete -f https://github.com/cert-manager/cert-manager/releases/download/v1.8.1/cert-manager.yaml
+    EOF
+  }
+}
